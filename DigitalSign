@@ -1,0 +1,42 @@
+const crypto = require('crypto');
+const { generateKeyPairSync, createSign, createVerify } = crypto;
+const readline = require('readline');
+
+// Key generator
+const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+  modulusLength: 2048,
+  publicKeyEncoding: {
+    type: 'spki',
+    format: 'pem',
+  },
+  privateKeyEncoding: {
+    type: 'pkcs8',
+    format: 'pem',
+  },
+});
+
+// Interface
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+rl.question('Please insert your message: ', (data) => {
+  console.log(`You typed: ${data}`);
+
+  // Sign
+  const signer = createSign('rsa-sha256');
+  signer.update(data);
+  signer.end();
+  const signature = signer.sign(privateKey, 'hex');
+  console.log(`Assinatura: ${signature}`);
+
+  // Verify
+  const verifier = createVerify('rsa-sha256');
+  verifier.update(data);
+  verifier.end();
+  const isValid = verifier.verify(publicKey, signature, 'hex');
+  console.log(`Assinatura válida? ${isValid}`);
+
+  rl.close();
+});
