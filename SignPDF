@@ -1,0 +1,39 @@
+const fs = require('fs');
+const crypto = require('crypto');
+const pdfParse = require('pdf-parse');
+
+// Gera par de chaves
+const { generateKeyPairSync, createSign, createVerify } = crypto;
+const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+  modulusLength: 2048,
+  publicKeyEncoding: {
+    type: 'spki',
+    format: 'pem',
+  },
+  privateKeyEncoding: {
+    type: 'pkcs8',
+    format: 'pem',
+  },
+});
+
+// Lê o PDF
+const pdfBuffer = fs.readFileSync('documento.pdf'); // substitua pelo nome do seu arquivo
+
+pdfParse(pdfBuffer).then(data => {
+  const text = data.text;
+  console.log('Conteúdo do PDF:', text);
+
+  // Assinatura
+  const signer = createSign('rsa-sha256');
+  signer.update(text);
+  signer.end();
+  const signature = signer.sign(privateKey, 'hex');
+  console.log(`Assinatura: ${signature}`);
+
+  // Verificação
+  const verifier = createVerify('rsa-sha256');
+  verifier.update(text);
+  verifier.end();
+  const isValid = verifier.verify(publicKey, signature, 'hex');
+  console.log(`Assinatura válida? ${isValid}`);
+});
