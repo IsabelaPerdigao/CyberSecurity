@@ -1,0 +1,73 @@
+1. Executive Summary
+This methodological analysis aimed to investigate a malicious URL distributed via Smishing (Phishing via Gmail).
+The primary objective was not exploitation, but passive reconnaissance (OSINT) and analysis of the attacker's defense infrastructure, strictly adhering to ethical and legal guidelines (no active scanning).
+
+Despite multiple security evasion attempts (including User-Agent and Referer Spoofing), access was consistently denied, returning the HTTP 403 Forbidden code. 
+This persistence is the main finding, indicating the attacker employs robust anti-analysis mechanisms (such as WAF, Geo-blocking, or behavioral filtering) to shield the operation from being quickly taken down by researchers. The conclusion reinforces the complexity of Defense Evasion in modern cybercrime
+
+
+1.1. Compliance and Ethical Statement
+The procedures detailed in this report strictly adhere to ethical hacking principles.
+Non-Intrusion Principle: All tests performed (OSINT and header manipulation) were non-intrusive and designed purely for observation and analysis. The consistent HTTP 403 Forbidden response confirms that no unauthorized access was gained.
+Legal Conformity: The methodology complies with all applicable local laws governing cyber research, as no active attempt was made to gain unauthorized access, modify, or disrupt the target system. The entire process falls within the widely recognized "right to research" and investigation for public safety purposes.
+Ethical Boundary: The testing scope was limited to client-side interaction and publicly available information. The goal was to study threat actors' defenses, not to perform harm or violate system integrity.
+
+2. Category,Details
+Target (Obscured), (TARGET_URL)
+Date of Analysis: 23/11
+Methodology,Passive Analysis (OSINT) and CLI evasion tests.
+Ethical Restrictions: "No attempts at active exploitation, broad port scanning (nmap), or brute-force attacks were performed."
+
+3. Methodology and Findings
+The analysis was conducted from a Windows terminal (PowerShell), utilizing the curl.exe utility to manipulate HTTP headers and simulate different client behaviors.
+
+3.1. Stage 1: Domain Intelligence (WHOIS)ToolWHOIS (via CLI or web service)
+ActionChecked domain registration and age to validate the authenticity of the purported brand.
+Finding: The domain creation date was recent ([e.g., 5 days ago]), confirming its fraudulent nature despite the high-profile brand impersonation.
+Conclusion: Confirmed the target is part of a newly established phishing campaign.
+
+Return:
+62.72.xx.xxxx (Vilnius, Lithuania)
+ASN47583 (AS-HOSTINGER Hostinger International Limited, CY)
+PTR: smtp.TARGET_URL.com
+TARGET_URL
+
+3.2. Stage 2: Visual Sandbox Analysis (Urlscan.io)
+Tool,Urlscan.io (or similar automated sandbox)
+Action,"Submitted the URL for safe, automated visual rendering and data extraction."
+Finding,"The tool returned a 403 Forbidden error or ""Access Denied"" result."
+Conclusion,"The server deployed its first defense layer, actively blocking automated security analysis tools. This prompted a shift to manual CLI testing."
+
+3.3. Stage 3: Initial Interaction & Baseline (curl.exe)
+Command,"curl.exe -I ""TARGET_URL"""
+Finding,HTTP/1.1 403 Forbidden
+Analysis,Confirmed the block is server-side and persistent.
+
+3.4. Stage 4: Evasion #1 — User-Agent Spoofing (Mobile Simulation)
+Hypothesis: The scam targets mobile users; the server filters desktop traffic.
+
+Command (Abridged),"curl.exe -I -k -A ""Mozilla/5.0 (iPhone; ...)"" ""TARGET_URL"""
+Action,Used iPhone User-Agent (-A) and ignored certificate errors (-k).
+Finding,HTTP/1.1 403 Forbidden
+Analysis,The block is not a simple User-Agent filter.
+
+3.5. Stage 5: Evasion #2 — Referer Spoofing (Origin Simulation)
+Hypothesis: The server requires a legitimate source header (e.g., search engine or social media).
+Command (Abridged),"curl.exe -I -k -A ""..."" -H ""Referer: https://www.google.com/"" ""TARGET_URL"""
+Action,Spoofed the Referer header to simulate traffic from Google.
+Finding,HTTP/1.1 403 Forbidden
+Analysis,The block is highly persistent and likely relies on IP/Geo-location filtering or requires a client-side JavaScript execution (JS Challenge) which curl cannot perform.
+
+
+4. Discovery Summary (Findings Summary)
+The analysis resulted in a successful methodological outcome, even without access to the final payload.
+
+Evidence: The attacker successfully thwarted both automated sandbox analysis and multiple manual client-side evasion attempts.
+Implications: The persistence of the 403 Forbidden confirms that the attacker employs a layered defense—a sophisticated strategy known as Defense Evasion—to maximize the campaign's lifespan.
+Analytical Value: The persistent block itself is the discovery, highlighting the increasing need for security researchers to bypass WAFs and Geo-filters when conducting Threat Hunting.
+
+5. Lessons Learned and Recommendations
+Persistence and Protocol Knowledge: The ability to troubleshoot complex HTTP status codes and deploy logical evasion techniques is critical.
+Recommendation: Defense teams should be aware that phishing infrastructure is increasingly protected by WAFs, making rapid detection and takedown difficult without specialized tools.
+
+Isabela Perdigão | https://www.linkedin.com/in/isabela-perdigao/
