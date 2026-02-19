@@ -1,0 +1,31 @@
+Executive Summary
+During a security assessment of a major financial services platform, I identified a critical business logic vulnerability within the user registration workflow. The application issued high-privilege JSON Web Tokens (JWT) immediately following initial credential submission, but prior to mandatory Email/SMS verification (KYC). This flaw allowed unverified accounts to bypass frontend restrictions and interact directly with production API endpoints.
+
+Technical Skills Demonstrated
+Web Security Testing: Manual API exploration and HTTP/2 traffic analysis.
+
+Advanced Burp Suite Proficiency: Strategic use of Proxy and Repeater for request manipulation and session analysis.
+
+Authentication & Authorization Analysis: Deconstructing JWT structures and validating authorization scopes.
+
+Compliance-Driven Pentesting: Evaluating security flaws against financial regulations such as KYC (Know Your Customer) and AML (Anti-Money Laundering).
+
+Vulnerability Profile
+Category: OWASP A01:2021 – Broken Access Control
+Vulnerability Type: Authentication Logic Bypass / Pre-verification Token Leak
+Severity: Medium/High (due to regulatory risk and potential for automated account abuse)
+Impact Analysis
+The vulnerability permitted unverified "ghost" accounts to access sensitive production data, including:
+
+User Basic Info: Exposure of PII (Personally Identifiable Information).
+Portfolios: Full access to financial asset structures and balance details.
+Internal Settings: Interaction with backend microservices via internal API scopes.
+
+Exploitation Methodology
+Interception: Identified the Bearer Token issued by the server immediately after the signup form submission, while the UI was still prompting for a verification code.
+
+Bypass: Utilized the captured token within Burp Repeater to send direct requests to sensitive endpoints, successfully evading the frontend "Verification Gate".
+Validation: Confirmed unauthorized access via HTTP/2 200 OK responses across multiple endpoints, proving the server-side trusted the token despite the unverified status of the account.
+
+Root Cause & Remediation
+The vulnerability was rooted in improper session state management. I recommended a state-based validation system where JWTs issued during registration are restricted to an unverified scope. This prevents any interaction with sensitive data until the backend receives and validates the correct verification challenge response.
