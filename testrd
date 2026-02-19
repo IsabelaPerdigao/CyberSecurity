@@ -1,0 +1,84 @@
+O parametro get para  /user/basic_info/?userUuid=xxx retorna 200 mas com informações atreladas ao bearer do usuario 1, tentei mudar os parametros para put e patch, mas sem sucesso 
+
+PUT /user/basic_info/?userUuid= XXX
+
+retornou um erro de falta de dados, tentei então adicionar os campos manualmente pelo burpsuite
+
+{
+  "address": "1600 Amphitheatre Parkway",
+  "city": "Mountain View",
+  "state": "CA",
+  "zipcode": "94043",
+  "phone_number": "16502530000",
+  "date_of_birth": "1990-01-01",
+  "citizenship": "US",
+  "email_verified": true,
+  "is_verified": true
+}
+
+não foi autorizado, então fiz um decode para do bearer e retornou 
+{
+  "alg": "ES256",
+  "kid": "2",
+  "typ": "JWT"
+}
+
+tentei trocar os codigoso via decoder mas ainda retornou 401
+HTTP/2 401 Unauthorized
+Content-Type: text/plain
+Content-Length: 23
+Rh-Auth-Blocked-Reason: jwt_invalid
+
+
+fiz um teste no intruder visando o bypass de senha
+o limite do servidor foram 15 tentativas, após isso ele deu 429 e não deixou mais mesmo trocando o ip e user agent 
+
+
+Teste A: Enumeração de E-mails (Account Enumeration)
+reorna o mesmo tamanho, nãoé possivel identificar
+
+Teste B: Host Header Injection (Sequestro de Link)
+não deu certo, 400
+
+Teste C: Parameter Pollution no JSON
+o servidor não permite novos parametros para email, mas retorna que o codigo está quebrado 
+
+1. Refinando o Host Header Injection (Bypass do 400)
+mantive o hiot: api.robinhood.com original e adicionei estes headers 
+
+X-Forwarded-Host: seu-id.webhook.site
+X-Forwarded-Server: seu-id.webhook.site
+X-Host: seu-id.webhook.site
+
+O Objetivo: Ver se o código que gera o e-mail de reset usa um desses headers para construir o link em vez do Host principal.
+Na o usa, está em outro local 
+
+2. Explorando o erro de Unicode (Fuzzing de Caracteres)
+testei meu email errado com caracteres diferentes, mas não deu problema, o problema foi mesmo no parametro 
+
+1. Manipulação de Resposta (Response Manipulation)
+{"email":"seu_email@gmail.com\",\"custom_msg\":\"Your account is hacked! Please call 1-234...\""}
+
+não foipossivel, o servidor bloqueia a aplicação 
+
+2- mistério do e-mail chegar quando o caractere está no início
+eles aceitam payloads antes do email (\n por exemplo) 
+2. Bypass de E-mail e SQL Injection (Teste 2)
+{"email":"' OR 1=1 --@gmail.com"}
+{"email":"admin' --@gmail.com"}
+{"email":"email@gmail.com' waitfor delay '0:0:10' --"}
+todos deram "email":["Enter a valid email address."]}
+o servidor retornar "Enter a valid email address." para os caracteres de aspas e comentários (' OR 1=1 --) mostra que existe uma validação de Regex
+
+
+tentei mandar pros emails da propria empresa, mas tambem retornaarm 200, dificil saber 
+admin@robinhood.com
+security@robinhood.com
+root@localhost
+
+
+XSS no Crumbs (Telemetria)
+o crumbs tem a mensagem 
+"I've left a trail, like last time!' Hansel whispered to
+				 Gretel"
+bom, fui "pega", mas é possivel injetar um payload no usuario 
